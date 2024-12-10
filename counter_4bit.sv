@@ -1,8 +1,4 @@
-// This counter is designed using register, adder and a multiplexer. 
-// Normally we don't use this appraoch as this requires more hardware there a simple counter 
-// that adds constant value "1'b1".
-
-module counter_4bit#(
+module counter_4bit1#(
 )(
     input logic clk,
     input logic reset_n,
@@ -11,16 +7,53 @@ module counter_4bit#(
     output logic [3:0] count
 );
 
-    logic [3:0]next_count;
-    assign next_count = load ? (load_data):(count + 1) ;
+        logic dff0_data_i;
+        logic dff1_data_i;
+        logic dff2_data_i;
+        logic dff3_data_i;
 
 
-    always @(posedge clk, negedge reset_n)
-    begin 
-        if(!reset_n)
-            count <= 0;
-        else 
-            count <= next_count;
-    end
+        // Next count logic 
+        logic [3:0] next_count;
+        assign next_count[0] = count[0];
+        assign next_count[1] = count[0] ^ count[1];
+        assign next_count[2] = (count[0] & count[1]) ^ count[2];
+        assign next_count[3] = (count[0] & count[1] & count[2])  ^ count[3];
+
+        // do count plus one or load a value to counter
+        mux2x1 mux_inst0(load,load_data[0], next_count[0], dff0_data_i);
+        mux2x1 mux_inst1(load,load_data[1], next_count[1],  dff1_data_i);
+        mux2x1 mux_inst2(load,load_data[2], next_count[2],  dff2_data_i);
+        mux2x1 mux_inst3(load,load_data[3], next_count[3], dff3_data_i);
+
+
+        // D flip flops
+        d_flipflop dff0(
+            .clk(clk),
+            .D(dff0_data_i),
+            .reset_n(reset_n),
+            .Q(count[0])
+            );
+
+        d_flipflop dff1(
+            .clk(clk),
+            .D(dff1_data_i),
+            .reset_n(reset_n),
+            .Q(count[1])
+            );
+
+        d_flipflop dff2(
+            .clk(clk),
+            .reset_n(reset_n),
+            .D(dff2_data_i),
+            .Q(count[2])
+            );
+
+        d_flipflop dff3(
+            .clk(clk),
+            .D(dff3_data_i),
+            .reset_n(reset_n),
+            .Qn(count[3])
+            );
 
 endmodule
